@@ -11,6 +11,7 @@ object HttpAuthPrompt {
     fun show(
         context: Context,
         title: String,
+        allowRemember: Boolean,
         onSubmit: (user: String, pass: String, remember: Boolean) -> Unit,
         onCancel: () -> Unit,
     ) {
@@ -26,7 +27,7 @@ object HttpAuthPrompt {
             setPadding(padding, padding, padding, 0)
             addView(user)
             addView(pass)
-            addView(remember)
+            if (allowRemember) addView(remember)
         }
         AlertDialog.Builder(context)
             .setTitle(title)

@@ -83,9 +83,20 @@ class HostStoreTest {
     }
 
     @Test
+    fun changingOriginNotifiesListener() = runBlocking {
+        val changed = mutableListOf<String>()
+        val notifying = HostStore(dataStore, onOriginChanged = { changed += it })
+        notifying.upsert(Host("a", "Alpha", "https://a.example.com"))
+        notifying.upsert(Host("a", "Alpha", "https://A.example.com:443/desk"))
+        assertEquals(emptyList<String>(), changed)
+        notifying.upsert(Host("a", "Alpha", "https://b.example.com"))
+        assertEquals(listOf("a"), changed)
+    }
+
+    @Test
     fun deleteNotifiesListener() = runBlocking {
         val deleted = mutableListOf<String>()
-        val notifying = HostStore(dataStore) { deleted += it }
+        val notifying = HostStore(dataStore, onDeleted = { deleted += it })
         notifying.upsert(Host("a", "Alpha", "https://a.example.com"))
         notifying.delete("a")
         assertEquals(listOf("a"), deleted)

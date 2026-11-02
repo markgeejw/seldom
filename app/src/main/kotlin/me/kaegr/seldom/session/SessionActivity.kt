@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -31,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.kaegr.seldom.SeldomServices
 import me.kaegr.seldom.hosts.Host
+import me.kaegr.seldom.hosts.originOf
 
 class SessionActivity : ComponentActivity() {
     private lateinit var services: SeldomServices
@@ -68,7 +68,7 @@ class SessionActivity : ComponentActivity() {
             WebView.setWebContentsDebuggingEnabled(true)
         }
         val script = assets.open("seldom-input.js").use { it.readBytes().decodeToString() }
-        val origin = originOf(host.url.toUri())
+        val origin = originOf(host.url).orEmpty()
         val view = SessionWebView(this)
         web = view
         view.settings.apply {
@@ -145,13 +145,16 @@ class SessionActivity : ComponentActivity() {
         private val origin: String,
         private val fallbackScript: String?,
     ) : WebViewClient() {
-        private var savedCredentialsTried = false
+        private val auth = HttpAuthSession()
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-            if (originOf(request.url) == origin) return false
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, request.url))
-            } catch (_: ActivityNotFoundException) {
+            if (!request.isForMainFrame) return false
+            if (originOf(request.url.toString()) == origin) return false
+            if (request.url.scheme?.lowercase() in WEB_SCHEMES) {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, request.url).addCategory(Intent.CATEGORY_BROWSABLE))
+                } catch (_: RuntimeException) {
+                }
             }
             return true
         }
@@ -161,23 +164,29 @@ class SessionActivity : ComponentActivity() {
         }
 
         override fun onPageFinished(view: WebView, url: String) {
-            savedCredentialsTried = false
             fallbackScript?.let { view.evaluateJavascript(it, null) }
+            auth.onPageFinished()?.let { remembered ->
+                lifecycleScope.launch { services.vault.put(host.id, remembered.user, remembered.pass) }
+            }
         }
 
         override fun onReceivedHttpAuthRequest(view: WebView, handler: HttpAuthHandler, authHost: String, realm: String) {
+            val savedRejected = auth.onChallenge()
+            val ownHost = isHostOf(authHost, host.url)
             lifecycleScope.launch {
-                val saved = if (savedCredentialsTried) null else services.vault.get(host.id)
+                if (savedRejected) services.vault.forget(host.id)
+                val saved = if (ownHost && !savedRejected) services.vault.get(host.id) else null
                 if (saved != null) {
-                    savedCredentialsTried = true
+                    auth.savedSent()
                     handler.proceed(saved.user, saved.pass)
                     return@launch
                 }
                 HttpAuthPrompt.show(
                     context = this@SessionActivity,
                     title = authHost,
+                    allowRemember = ownHost,
                     onSubmit = { user, pass, remember ->
-                        if (remember) lifecycleScope.launch { services.vault.put(host.id, user, pass) }
+                        if (remember && ownHost) auth.entered(Credentials(user, pass))
                         handler.proceed(user, pass)
                     },
                     onCancel = { handler.cancel() },
@@ -192,9 +201,6 @@ class SessionActivity : ComponentActivity() {
                 .setData("seldom://host/${host.id}".toUri())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
 
-        private fun originOf(uri: Uri): String {
-            val port = if (uri.port == -1) "" else ":${uri.port}"
-            return "${uri.scheme}://${uri.host}$port"
-        }
+        private val WEB_SCHEMES = setOf("http", "https")
     }
 }

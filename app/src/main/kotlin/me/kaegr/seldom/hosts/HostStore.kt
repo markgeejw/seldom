@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -12,13 +13,18 @@ import kotlinx.serialization.json.Json
 class HostStore(
     private val dataStore: DataStore<Preferences>,
     private val onDeleted: suspend (hostId: String) -> Unit = {},
+    private val onOriginChanged: suspend (hostId: String) -> Unit = {},
 ) {
     private val serializer = ListSerializer(Host.serializer())
 
     val hosts: Flow<List<Host>> = dataStore.data.map { decode(it[HOSTS_KEY]) }
 
-    suspend fun upsert(host: Host) = update { list ->
-        if (list.any { it.id == host.id }) list.map { if (it.id == host.id) host else it } else list + host
+    suspend fun upsert(host: Host) {
+        val previous = hosts.first().firstOrNull { it.id == host.id }
+        update { list ->
+            if (list.any { it.id == host.id }) list.map { if (it.id == host.id) host else it } else list + host
+        }
+        if (previous != null && originOf(previous.url) != originOf(host.url)) onOriginChanged(host.id)
     }
 
     suspend fun delete(id: String) {

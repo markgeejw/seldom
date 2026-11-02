@@ -54,6 +54,23 @@ class HostValidatorTest {
     }
 
     @Test
+    fun normalizeLowercasesSchemeAndHostAndDropsDefaultPort() {
+        assertEquals("https://worker.kaegr.me", HostValidator.normalize("HTTPS://Worker.kaegr.me:443/"))
+        assertEquals("https://worker.kaegr.me:8443/Desk", HostValidator.normalize("https://Worker.kaegr.me:8443/Desk"))
+    }
+
+    @Test
+    fun originOfIgnoresCaseAndDefaultPort() {
+        assertEquals("https://worker.kaegr.me", originOf("HTTPS://Worker.kaegr.me:443/desk?q=1"))
+        assertEquals("https://worker.kaegr.me:8443", originOf("https://worker.kaegr.me:8443"))
+    }
+
+    @Test
+    fun hostOfLowercasesTheHost() {
+        assertEquals("worker.kaegr.me", hostOf("https://Worker.kaegr.me:8443/desk"))
+    }
+
+    @Test
     fun normalizeTrimsAndDropsTrailingSlashes() {
         assertEquals("https://worker.kaegr.me", HostValidator.normalize(" https://worker.kaegr.me/ "))
         assertEquals("https://worker.kaegr.me/desk", HostValidator.normalize("https://worker.kaegr.me/desk//"))

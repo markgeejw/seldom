@@ -19,5 +19,5 @@ object HostValidator {
         }
     }
 
-    fun normalize(url: String): String = url.trim().trimEnd('/')
+    fun normalize(url: String): String = normalizeOrigin(url.trim()).trimEnd('/')
 }

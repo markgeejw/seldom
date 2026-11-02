@@ -95,6 +95,18 @@ class CredentialVaultTest {
     }
 
     @Test
+    fun failingCipherDoesNotCrashPutOrForget() = runBlocking {
+        val failing = object : CredentialCipher {
+            override fun encrypt(plain: ByteArray): ByteArray = error("keystore down")
+            override fun decrypt(encrypted: ByteArray): ByteArray = error("keystore down")
+        }
+        val broken = CredentialVault(prefs, failing)
+        broken.put("a", "alice", "one")
+        broken.forget("a")
+        assertNull(broken.get("a"))
+    }
+
+    @Test
     fun undecryptableEntryReadsAsMissing() = runBlocking {
         vault.put("a", "alice", "one")
         val failing = object : CredentialCipher {

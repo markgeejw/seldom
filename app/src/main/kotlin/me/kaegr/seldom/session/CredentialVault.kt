@@ -16,22 +16,22 @@ class CredentialVault(
     private val prefs: DataStore<Preferences>,
     private val cipher: CredentialCipher,
 ) {
-    suspend fun get(hostId: String): Credentials? {
-        val stored = prefs.data.first()[key(hostId)] ?: return null
-        return runCatching {
-            val plain = cipher.decrypt(Base64.decode(stored, Base64.NO_WRAP))
-            Json.decodeFromString(Credentials.serializer(), plain.decodeToString())
-        }.getOrNull()
-    }
+    suspend fun get(hostId: String): Credentials? = runCatching {
+        val stored = prefs.data.first()[key(hostId)] ?: return@runCatching null
+        val plain = cipher.decrypt(Base64.decode(stored, Base64.NO_WRAP))
+        Json.decodeFromString(Credentials.serializer(), plain.decodeToString())
+    }.getOrNull()
 
     suspend fun put(hostId: String, user: String, pass: String) {
-        val plain = Json.encodeToString(Credentials.serializer(), Credentials(user, pass)).encodeToByteArray()
-        val encoded = Base64.encodeToString(cipher.encrypt(plain), Base64.NO_WRAP)
-        prefs.edit { it[key(hostId)] = encoded }
+        runCatching {
+            val plain = Json.encodeToString(Credentials.serializer(), Credentials(user, pass)).encodeToByteArray()
+            val encoded = Base64.encodeToString(cipher.encrypt(plain), Base64.NO_WRAP)
+            prefs.edit { it[key(hostId)] = encoded }
+        }
     }
 
     suspend fun forget(hostId: String) {
-        prefs.edit { it.remove(key(hostId)) }
+        runCatching { prefs.edit { it.remove(key(hostId)) } }
     }
 
     private fun key(hostId: String) = stringPreferencesKey("credentials.$hostId")

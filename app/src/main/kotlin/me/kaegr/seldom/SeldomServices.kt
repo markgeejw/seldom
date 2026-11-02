@@ -10,7 +10,7 @@ private val Context.seldomDataStore by preferencesDataStore("seldom")
 
 class SeldomServices private constructor(context: Context) {
     val vault = CredentialVault(context.seldomDataStore, KeystoreCipher())
-    val hostStore = HostStore(context.seldomDataStore, onDeleted = vault::forget)
+    val hostStore = HostStore(context.seldomDataStore, onDeleted = vault::forget, onOriginChanged = vault::forget)
 
     companion object {
         @Volatile

@@ -15,6 +15,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".session.SessionActivity" />
+        <activity
+            android:name=".session.SessionActivity"
+            android:documentLaunchMode="intoExisting"
+            android:resizeableActivity="true"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|density|navigation|uiMode" />
     </application>
 </manifest>

@@ -12,6 +12,7 @@
 - Ctrl+Alt+Shift+Z toggles capture on and off and shows a toast.
 - Super is reported to the page as `metaKey` / `getModifierState('Meta')` while held.
 - Physical arrow keys are re-dispatched to the WebView so the page receives them.
+- Paste from the phone clipboard works in the page (text only).
 - Mouse hover is forwarded to the page so the remote cursor follows it; the Android pointer is hidden.
 
 ## Hosts

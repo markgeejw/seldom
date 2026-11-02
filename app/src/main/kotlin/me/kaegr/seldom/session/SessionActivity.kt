@@ -3,6 +3,7 @@ package me.kaegr.seldom.session
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -68,6 +69,7 @@ class SessionActivity : ComponentActivity() {
             WebView.setWebContentsDebuggingEnabled(true)
         }
         val script = assets.open("seldom-input.js").use { it.readBytes().decodeToString() }
+        val clipboardScript = assets.open("seldom-clipboard.js").use { it.readBytes().decodeToString() }
         val origin = originOf(host.url).orEmpty()
         val view = SessionWebView(this)
         web = view
@@ -78,6 +80,9 @@ class SessionActivity : ComponentActivity() {
         }
         val fallbackScript = if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
             WebViewCompat.addDocumentStartJavaScript(view, script, setOf(origin))
+            if (installClipboardBridge(view, origin)) {
+                WebViewCompat.addDocumentStartJavaScript(view, clipboardScript, setOf(origin))
+            }
             null
         } else {
             script
@@ -86,6 +91,18 @@ class SessionActivity : ComponentActivity() {
         setContentView(view)
         view.requestFocus()
         view.loadUrl(host.url)
+    }
+
+    private fun installClipboardBridge(view: WebView, origin: String): Boolean {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return false
+        val clipboard = getSystemService(ClipboardManager::class.java)
+        val bridge = ClipboardBridge { clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() }
+        WebViewCompat.addWebMessageListener(view, "SeldomClipboard", setOf(origin)) { _, message, sourceOrigin, isMainFrame, replyProxy ->
+            if (!isMainFrame || sourceOrigin.toString() != origin) return@addWebMessageListener
+            val data = message.data ?: return@addWebMessageListener
+            bridge.reply(data)?.let(replyProxy::postMessage)
+        }
+        return true
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

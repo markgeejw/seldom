@@ -11,8 +11,13 @@ import org.robolectric.RobolectricTestRunner
 class CaptureToggleTest {
     private val allModifiers = KeyEvent.META_CTRL_ON or KeyEvent.META_ALT_ON or KeyEvent.META_SHIFT_ON
 
-    private fun event(action: Int, keyCode: Int, meta: Int) =
-        KeyEvent(0L, 0L, action, keyCode, 0, meta)
+    private fun event(action: Int, keyCode: Int, meta: Int, repeat: Int = 0) =
+        KeyEvent(0L, 0L, action, keyCode, repeat, meta)
+
+    @Test
+    fun ignoresAutoRepeat() {
+        assertFalse(isCaptureToggle(event(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Z, allModifiers, repeat = 1)))
+    }
 
     @Test
     fun detectsCtrlAltShiftZDown() {

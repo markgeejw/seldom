@@ -18,8 +18,9 @@ class KeyboardCapture(private val window: Window, private val componentName: Com
     }.isSuccess
 
     private fun setSamsung(enabled: Boolean): Boolean = runCatching {
-        val manager = Class.forName(SAMSUNG_WINDOW_MANAGER).getMethod("getInstance").invoke(null)
-        manager.javaClass
+        val managerClass = Class.forName(SAMSUNG_WINDOW_MANAGER)
+        val manager = managerClass.getMethod("getInstance").invoke(null)
+        managerClass
             .getDeclaredMethod("requestMetaKeyEvent", ComponentName::class.java, Boolean::class.javaPrimitiveType)
             .invoke(manager, componentName, enabled)
     }.isSuccess

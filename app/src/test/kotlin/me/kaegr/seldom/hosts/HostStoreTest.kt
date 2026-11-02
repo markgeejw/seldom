@@ -81,4 +81,13 @@ class HostStoreTest {
         store.upsert(a)
         assertEquals(listOf(a), HostStore(dataStore).hosts.first())
     }
+
+    @Test
+    fun deleteNotifiesListener() = runBlocking {
+        val deleted = mutableListOf<String>()
+        val notifying = HostStore(dataStore) { deleted += it }
+        notifying.upsert(Host("a", "Alpha", "https://a.example.com"))
+        notifying.delete("a")
+        assertEquals(listOf("a"), deleted)
+    }
 }

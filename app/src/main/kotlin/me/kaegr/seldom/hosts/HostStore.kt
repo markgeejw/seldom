@@ -9,7 +9,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
-class HostStore(private val dataStore: DataStore<Preferences>) {
+class HostStore(
+    private val dataStore: DataStore<Preferences>,
+    private val onDeleted: suspend (hostId: String) -> Unit = {},
+) {
     private val serializer = ListSerializer(Host.serializer())
 
     val hosts: Flow<List<Host>> = dataStore.data.map { decode(it[HOSTS_KEY]) }
@@ -18,7 +21,10 @@ class HostStore(private val dataStore: DataStore<Preferences>) {
         if (list.any { it.id == host.id }) list.map { if (it.id == host.id) host else it } else list + host
     }
 
-    suspend fun delete(id: String) = update { list -> list.filterNot { it.id == id } }
+    suspend fun delete(id: String) {
+        update { list -> list.filterNot { it.id == id } }
+        onDeleted(id)
+    }
 
     private suspend fun update(transform: (List<Host>) -> List<Host>) {
         dataStore.edit { prefs ->

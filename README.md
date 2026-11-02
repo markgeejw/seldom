@@ -49,4 +49,6 @@
 ## Releases
 
 - Pushing a tag `v<seldomVersionName>` runs `.github/workflows/release.yml`: tests, lint, signed build, signer check, then a draft prerelease.
-- Required secrets: `SELDOM_KEYSTORE_BASE64`, `SELDOM_KEYSTORE_PASSWORD`, `SELDOM_KEY_ALIAS`, `SELDOM_SIGNER_SHA256` (expected signer certificate SHA-256, 64 hex digits).
+- Required secrets: `SELDOM_KEYSTORE_BASE64`, `SELDOM_KEYSTORE_PASSWORD`, `SELDOM_KEY_ALIAS`.
+- The expected signer certificate SHA-256 is pinned in `release/signer-sha256.txt`; the release fails if the APK is signed by any other certificate.
+- `seldomVersionName` must equal `0.<seldomVersionCode>.0`.
